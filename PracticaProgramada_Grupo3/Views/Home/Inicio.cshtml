@@ -1,0 +1,107 @@
+﻿@using Microsoft.EntityFrameworkCore;
+@{
+    ViewData["Title"] = "Home";
+    var username = Context.Session.GetString("Username");
+    var userId = Context.Session.GetInt32("UserID");
+}
+
+
+<div style="display:flex; justify-content:center;">
+    @if (username != null)
+    {
+        <h1 style="font-size: 100px;
+    color: black;
+    margin: 10px auto;
+    font-family: "Arial Black", Gadget, sans-serif;"
+        >
+            Bienvenido, @username
+        </h1>
+    }
+    else
+    {
+        <p>Bienvenido, invitado</p>
+    }
+</div>
+<section>
+    <h1 class="game--title">Gato</h1>
+    <div class="game--container">
+        <div data-cell-index="0" class="cell"></div>
+        <div data-cell-index="1" class="cell"></div>
+        <div data-cell-index="2" class="cell"></div>
+        <div data-cell-index="3" class="cell"></div>
+        <div data-cell-index="4" class="cell"></div>
+        <div data-cell-index="5" class="cell"></div>
+        <div data-cell-index="6" class="cell"></div>
+        <div data-cell-index="7" class="cell"></div>
+        <div data-cell-index="8" class="cell"></div>
+    </div>
+    <h2 class="game--status"></h2>
+    <button class="game--restart">Restart Game</button>
+</section>
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const cells = document.querySelectorAll('.cell');
+            const statusText = document.querySelector('.game--status');
+            const restartButton = document.querySelector('.game--restart');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.innerText = 'Cargando...';
+            loadingIndicator.style.display = 'none';
+            document.body.appendChild(loadingIndicator);
+
+            function setLoading(isLoading) {
+                loadingIndicator.style.display = isLoading ? 'block' : 'none';
+                cells.forEach(cell => cell.style.pointerEvents = isLoading ? 'none' : '');
+            }
+
+            cells.forEach(cell => {
+                cell.addEventListener('click', function () {
+                    const cellIndex = this.getAttribute('data-cell-index');
+                    makeMove(cellIndex);
+                });
+            });
+
+            restartButton.addEventListener('click', function () {
+                restartGame();
+            });
+
+            function makeMove(cellIndex) {
+                setLoading(true);
+                fetch(`/Game/Play?cellIndex=${cellIndex}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        updateBoard(data.board);
+                        if (data.message) {
+                            statusText.innerText = data.message;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        statusText.innerText = 'Error al realizar la jugada.';
+                    })
+                    .finally(() => setLoading(false));
+            }
+
+            function restartGame() {
+                setLoading(true);
+                fetch(`/Game/Restart`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        updateBoard(data.board);
+                        statusText.innerText = 'Juego reiniciado.';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        statusText.innerText = 'Error al reiniciar el juego.';
+                    })
+                    .finally(() => setLoading(false));
+            }
+
+            function updateBoard(board) {
+                board.forEach((cell, index) => {
+                    cells[index].innerText = cell === ' ' ? '' : cell;
+                });
+            }
+        });
+    </script>
+}
